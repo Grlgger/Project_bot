@@ -1,44 +1,87 @@
 import telebot
+from random import randint
 import wikipedia
-import re
 
 bot = telebot.TeleBot('6260039556:AAFShx6DLZlea6VXQH-AYxS6CgcwG8TEAgw')
-wikipedia.set_lang("ru")
-
-
-def getwiki(s):
-    try:
-        v = wikipedia.page(s)
-        text = v.content[:1000]
-        wikimas = text.split('.')
-        wikimas = wikimas[:-1]
-        text = ''
-
-        for x in wikimas:
-            if not ('==' in x):
-                if (len((x.strip())) > 3):
-                    text = text + x + '.'
-            else:
-                break
-
-        text = re.sub('\([^()]*\)', '', text)
-        text = re.sub('\([^()]*\)', '', text)
-        text = re.sub('\{[^\{\}]*\}', '', text)
-
-        return text
-
-    except Exception as e:
-        return 'Я не знаю, что это. . .'
 
 
 @bot.message_handler(commands=["start"])
-def start(m, res=False):
-    bot.send_message(m.chat.id, 'Отправь мне любое слово и узнай его значение')
+def start(m):
+    bot.send_message(m.chat.id, f'Привет, {m.from_user.first_name}!')
+
+
+wikipedia.set_lang("ru")
+
+
+def func(word):
+    try:
+        s = wikipedia.page(word)
+        s = s.content[:1000]
+        lst = s.split('.')[:-1]
+        res = ''
+        for i in lst:
+            if '==' not in i:
+                if len(i.strip()) > 3:
+                    res += i
+                    res += '.'
+            else:
+                break
+        return res
+    except Exception as e:
+        return 'Я не знаю, спроси что-нибудь другое'
+
+
+knb = ['Камень', 'Ножницы', 'Бумага']
+mnb = 0
+b = 0
 
 
 @bot.message_handler(content_types=["text"])
-def handle_text(message):
-    bot.send_message(message.chat.id, getwiki(message.text))
+def handle_text(m):
+    global mnb
+    global b
+    g = 0
+    if m.text.lower() == 'привет' or m.text.lower() == 'смешно':
+        g -= 1
+    if mnb != 0:
+        g -= 1
+        ch = randint(0, 2)
+        bot.send_message(m.chat.id, knb[ch])
+        mnb = 0
+        if m.text.lower() == knb[ch].lower():
+            bot.send_message(m.chat.id, 'Ничья!')
+        elif m.text.lower() == 'камень' and knb[ch].lower() == 'ножницы' or m.text.lower() == 'ножницы' and \
+                knb[ch].lower() == 'бумага' or m.text.lower() == 'бумага' and knb[ch].lower() == 'камень':
+            bot.send_message(m.chat.id, 'Ты победил!')
+        else:
+            bot.send_message(m.chat.id, 'Я победил!')
+    if 'еще раз' in m.text and b == 1:
+        bot.send_message(m.chat.id, "Ок")
+        b = 0
+        mnb += 1
+        g -= 1
+    if 'анекдот' in m.text.lower() or 'шути' in m.text.lower() or 'шутка' in m.text.lower():
+        g -= 1
+        with open('j.txt', 'r', encoding='utf-8') as f:
+            s = f.readlines()
+            bot.send_message(m.chat.id, f'Анекдот: {s[randint(1, 10)]}')
+    elif (m.text.lower().split()[-1] == 'это' or 'что такое' in m.text.lower()) and len(m.text.lower().split()) >= 2:
+        if 'что такое' in m.text.lower():
+            bot.send_message(m.chat.id, func(' '.join(m.text.lower().split()[2:])))
+        else:
+            bot.send_message(m.chat.id, func(' '.join(m.text.lower().split()[:-1])))
+        g -= 1
+    elif 'музык' in m.text:
+        bot.send_audio(m.chat.id, open('mus.wav', 'rb'))
+        g -= 1
+    if 'кнб' in m.text.lower() or 'камень-ножницы-бумага' in m.text.lower():
+        bot.send_message(m.chat.id, 'Ну давай!')
+        mnb += 1
+        b = 1
+        g -= 1
+    g += 1
+    if g > 0:
+        bot.send_message(m.chat.id, '42')
 
 
 bot.polling(none_stop=True, interval=0)
